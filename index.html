@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Check</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        *:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+
+        .sr-only-heading {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        h1 { font-size: 1.2rem; margin: 0; }
+        h2 { font-size: 0.8rem; margin: 0; color: #999; }
+
+        /* Menu button */
+        .menu-btn {
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            background: none;
+            border: 1px solid #777;
+            color: #ccc;
+            cursor: pointer;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+        .menu-btn:hover { color: #fff; border-color: #fff; }
+
+        /* Main Question Area */
+        #main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+        #question-text {
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            min-height: 2.5rem;
+            line-height: 1.4;
+        }
+        .btn-group { display: flex; gap: 15px; width: 100%; max-width: 280px; }
+        button.action-btn {
+            flex: 1; padding: 15px; font-size: 1.2rem;
+            background-color: #333; color: white; border: 2px solid #fff;
+            border-radius: 0; cursor: pointer; font-family: monospace; text-transform: uppercase;
+        }
+        button.action-btn:active { background-color: #fff; color: #000; }
+
+        #status { font-size: 0.8rem; color: #888; margin-top: 10px; min-height: 1.2em; }
+
+        .skip-link {
+            margin-top: 22px;
+            background: none;
+            border: none;
+            color: #999;
+            font-family: monospace;
+            font-size: 0.8rem;
+            text-decoration: underline;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+        .skip-link:hover { color: #ccc; }
+
+        /* Full-screen overlay panels (menu, calendar, stats, how-to) */
+        .overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.98);
+            z-index: 200;
+            flex-direction: column;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .overlay-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .overlay-header-row h2 { color: #fff; font-size: 1rem; }
+        .cal-toggle { display: flex; gap: 5px; }
+        .toggle-btn {
+            padding: 4px 8px;
+            background: #333;
+            border: 1px solid #777;
+            color: #ccc;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .toggle-btn.active { color: #fff; border-color: #fff; background: #444; }
+        .close-cal {
+            font-size: 1.2rem;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+        }
+        .close-cal:hover { color: #fff; }
+
+        /* Menu list */
+        .menu-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+        .menu-item {
+            text-align: left;
+            padding: 14px 16px;
+            background: #151515;
+            border: 1px solid #333;
+            color: #eee;
+            font-family: monospace;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .menu-item:hover { border-color: #fff; background: #222; }
+
+        #calendar-overlay {
+            overflow-y: auto;
+        }
+        #calendar-mode-label {
+            color: #999;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        #calendar-grid {
+            flex-shrink: 0;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            align-content: start;
+            margin-bottom: 20px;
+        }
+        .cal-day-header {
+            font-size: 0.6rem; color: #999; text-align: center; padding: 1px;
+            line-height: 1;
+        }
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            border: 1px solid #333;
+            position: relative;
+        }
+        .cal-day.today { border: 2px solid #fff; }
+        .cal-day.yes { background-color: #4caf50; color: #000; font-weight: bold; }
+        .cal-day.no { background-color: #555; color: #ccc; }
+        .cal-day.unanswered { background-color: #161616; color: #555; }
+        .cal-day.empty { background-color: #111; color: #333; }
+
+        /* Question stats, now shown inside the Calendar overlay */
+        #calendar-stats-heading { color: #fff; font-size: 1rem; margin: 0 0 10px 0; flex-shrink: 0; }
+        #stats-search-input {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            background: #151515;
+            color: #fff;
+            border: 1px solid #777;
+            font-family: monospace;
+            margin-bottom: 6px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+        #calendar-stats-list { flex-shrink: 0; text-align: left; }
+        .stat-row {
+            border: 1px solid #333;
+            background: #111;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        button.stat-row {
+            display: block;
+            width: 100%;
+            font-family: monospace;
+            cursor: pointer;
+        }
+        button.stat-row:hover { border-color: #777; }
+        button.stat-row.selected { border-color: #fff; background: #1a1a1a; }
+        .stat-q { color: #fff; font-size: 0.95rem; margin-bottom: 6px; text-align: left; }
+        .stat-bar-track { background: #222; height: 8px; width: 100%; margin-bottom: 6px; }
+        .stat-bar-fill { background: #4caf50; height: 8px; }
+        .stat-nums { color: #ccc; font-size: 0.75rem; text-align: left; }
+        .stat-detail { color: #999; font-size: 0.75rem; margin-top: 6px; text-align: left; }
+
+        /* How to use */
+        #howto-content { flex: 1; overflow-y: auto; text-align: left; color: #ccc; font-size: 0.9rem; line-height: 1.6; }
+        #howto-content p { margin: 0 0 12px 0; }
+        #howto-content b { color: #fff; }
+
+        /* Modals */
+        .modal {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 100;
+            flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px; box-sizing: border-box;
+        }
+        #add-input {
+            width: 80%; padding: 12px; font-size: 1.1rem;
+            background: #222; color: white; border: 1px solid #777;
+            font-family: monospace; margin-bottom: 15px;
+        }
+        .hint { font-size: 0.65rem; color: #999; margin-bottom: 15px; text-align: center;}
+        #contact-email-display {
+            color: #fff;
+            font-size: 0.95rem;
+            text-align: center;
+            margin-bottom: 12px;
+            user-select: all;
+        }
+        #contact-copy-status {
+            font-size: 0.75rem;
+            color: #4caf50;
+            text-align: center;
+            min-height: 1em;
+            margin-top: -6px;
+            margin-bottom: 10px;
+        }
+        .modal-btn { width: 80%; background: #444; margin-top: 10px; padding: 12px; font-size: 0.9rem; border: 1px solid #fff; color: white; cursor: pointer;}
+        .close-btn { width: 80%; background: #222; margin-top: 10px; padding: 12px; font-size: 0.9rem; border: 1px solid #777; color: #ccc; cursor: pointer;}
+        #list-content {
+            width: 90%; max-height: 60vh; overflow-y: auto;
+            text-align: left; border: 1px solid #333; padding: 10px; background: #111;
+        }
+        .list-item { padding: 6px; border-bottom: 1px solid #333; color: #ccc; font-size: 0.9rem; }
+        .list-section-heading { color: #fff; font-size: 0.85rem; margin: 14px 0 4px 0; }
+        .list-section-heading:first-child { margin-top: 0; }
+        .list-note { color: #999; font-size: 0.75rem; margin-bottom: 6px; }
+        .list-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 4px;
+            border-bottom: 1px solid #333;
+        }
+        .list-row-text { color: #ccc; font-size: 0.9rem; text-align: left; flex: 1; }
+        .list-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .list-action-btn {
+            background: none;
+            border: 1px solid #777;
+            color: #ccc;
+            font-family: monospace;
+            font-size: 0.75rem;
+            padding: 5px 9px;
+            cursor: pointer;
+        }
+        .list-action-btn:hover { border-color: #fff; color: #fff; }
+        .freq-toggle {
+            display: flex;
+            gap: 8px;
+            width: 80%;
+            margin-bottom: 12px;
+        }
+        .freq-toggle .toggle-btn { flex: 1; padding: 8px; font-size: 0.85rem; }
+
+        /* Hidden file input for import */
+        #file-input { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div>
+            <h1 id="day-display">Loading...</h1>
+            <h2 id="date-display"></h2>
+        </div>
+        <button class="menu-btn" id="menu-btn-label" onclick="toggleMenu()" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu-overlay">MENU</button>
+    </header>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="file-input" accept=".txt" onchange="importData(this)" aria-label="Import data file">
+
+    <!-- MAIN VIEW -->
+    <main id="main-view">
+        <h2 id="question-text" aria-live="polite" aria-atomic="true">Loading...</h2>
+        <div class="btn-group">
+            <button class="action-btn" id="yes-btn" onclick="record(true)">YES</button>
+            <button class="action-btn" id="no-btn" onclick="record(false)">NO</button>
+        </div>
+        <button class="skip-link" id="skip-link" onclick="skipForNow()">Skip this for now</button>
+        <div id="status" role="status" aria-live="polite" aria-atomic="true"></div>
+    </main>
+
+    <!-- MENU OVERLAY -->
+    <div id="menu-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+        <div class="overlay-header-row">
+            <h2 id="menu-title">Menu</h2>
+            <button class="close-cal" id="close-menu-btn" onclick="toggleMenu()">Close</button>
+        </div>
+        <div class="menu-list">
+            <button class="menu-item" id="menu-add" onclick="fromMenu(toggleAddModal)"></button>
+            <button class="menu-item" id="menu-list" onclick="fromMenu(toggleList)"></button>
+            <button class="menu-item" id="menu-calendar" onclick="fromMenu(toggleCalendar)"></button>
+            <button class="menu-item" id="menu-lang" onclick="fromMenu(toggleLanguage)"></button>
+            <button class="menu-item" id="menu-howto" onclick="fromMenu(toggleHowTo)"></button>
+            <button class="menu-item" id="menu-about" onclick="fromMenu(toggleAbout)"></button>
+            <button class="menu-item" id="menu-contact" onclick="fromMenu(toggleContactModal)"></button>
+            <button class="menu-item" id="menu-export" onclick="fromMenu(toggleExportModal)"></button>
+            <button class="menu-item" id="menu-import" onclick="fromMenu(() => document.getElementById('file-input').click())"></button>
+        </div>
+    </div>
+
+    <!-- CALENDAR OVERLAY (calendar + per-question breakdown combined) -->
+    <div id="calendar-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="calendar-title">
+        <div class="overlay-header-row">
+            <h2 id="calendar-title" class="sr-only-heading">Calendar</h2>
+            <div class="cal-toggle" role="group" aria-label="Calendar range">
+                <button class="toggle-btn active" id="btn-7d" onclick="setCalView(7)" aria-pressed="true">7D</button>
+                <button class="toggle-btn" id="btn-30d" onclick="setCalView(30)" aria-pressed="false">30D</button>
+            </div>
+            <button class="close-cal" id="close-calendar-btn" onclick="toggleCalendar()">Close</button>
+        </div>
+        <div id="calendar-mode-label" aria-live="polite"></div>
+        <div id="calendar-grid" role="list" aria-label="Days answered"></div>
+        <h3 id="calendar-stats-heading">Question Stats</h3>
+        <input type="search" id="stats-search-input" placeholder="Search questions..." aria-label="Search questions" oninput="renderCalendarStatsList()">
+        <div id="stats-search-count" aria-live="polite" class="list-note"></div>
+        <div id="calendar-stats-list"></div>
+    </div>
+
+    <!-- HOW TO USE OVERLAY -->
+    <div id="howto-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+        <div class="overlay-header-row">
+            <h2 id="howto-title">How to Use</h2>
+            <button class="close-cal" id="close-howto-btn" onclick="toggleHowTo()">Close</button>
+        </div>
+        <div id="howto-content"></div>
+    </div>
+
+    <!-- ABOUT OVERLAY -->
+    <div id="about-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="about-title">
+        <div class="overlay-header-row">
+            <h2 id="about-title">About</h2>
+            <button class="close-cal" id="close-about-btn" onclick="toggleAbout()">Close</button>
+        </div>
+        <div id="about-content"></div>
+    </div>
+
+    <!-- CONTACT MODAL -->
+    <div id="contact-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+        <h2 id="contact-modal-title">Contact</h2>
+        <p class="hint" id="contact-hint">If you've hit an issue or have a suggestion, it helps a lot to include what device and browser you're using, and what you were doing when it happened. Tapping below will pre-fill that for you — just fill in the rest.</p>
+        <button class="modal-btn" id="contact-send-btn" onclick="openContactEmail()">Send Feedback</button>
+        <p class="hint" id="contact-fallback-hint">Opens whichever mail app is set as your device's default. If that's not the one you want to use:</p>
+        <div id="contact-email-display">rewindingsunflower@proton.me</div>
+        <button class="modal-btn" id="contact-copy-btn" onclick="copyContactEmail()">Copy Email Address</button>
+        <div id="contact-copy-status" role="status" aria-live="polite"></div>
+        <button class="close-btn" id="contact-cancel-btn" onclick="toggleContactModal()">Cancel</button>
+    </div>
+
+    <!-- LIST MODAL -->
+    <div id="list-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
+        <h2 id="list-modal-title">Current Questions</h2>
+        <div class="cal-toggle" id="list-filter-group" role="group" aria-label="Filter questions">
+            <button class="toggle-btn active" id="list-filter-all" onclick="setListFilter('all')" aria-pressed="true">All</button>
+            <button class="toggle-btn" id="list-filter-daily" onclick="setListFilter('daily')" aria-pressed="false">Daily</button>
+            <button class="toggle-btn" id="list-filter-weekly" onclick="setListFilter('weekly')" aria-pressed="false">Weekly</button>
+        </div>
+        <div id="list-content"></div>
+        <button class="close-btn" id="list-close-btn" onclick="toggleList()">Close</button>
+    </div>
+
+    <!-- ADD / EDIT MODAL -->
+    <div id="add-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+        <h2 id="add-modal-title">Add Question</h2>
+        <input type="text" id="add-input" placeholder="Type question...">
+        <div class="freq-toggle" id="add-freq-group" role="group" aria-label="Frequency">
+            <button type="button" class="toggle-btn active" id="freq-daily-btn" onclick="setAddFreq('daily')" aria-pressed="true">Daily</button>
+            <button type="button" class="toggle-btn" id="freq-weekly-btn" onclick="setAddFreq('weekly')" aria-pressed="false">Weekly</button>
+        </div>
+        <div class="hint" id="add-hint">Choose Daily or Weekly, then Save.</div>
+        <button class="modal-btn" id="save-btn" onclick="processInput()">Save</button>
+        <button class="close-btn" id="cancel-btn" onclick="toggleAddModal()">Cancel</button>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="delete-confirm-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+        <h2 id="delete-confirm-title">Delete Question</h2>
+        <p id="delete-confirm-text" class="hint"></p>
+        <button class="modal-btn" id="delete-confirm-btn" onclick="performDelete()">Delete</button>
+        <button class="close-btn" id="delete-cancel-btn" onclick="cancelDelete()">Cancel</button>
+    </div>
+
+    <!-- EXPORT MODAL -->
+    <div id="export-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+        <h2 id="export-modal-title">Export Data</h2>
+        <button class="modal-btn" id="export-download-btn" onclick="downloadExportFile()">Download File</button>
+        <button class="modal-btn" id="export-email-btn" onclick="emailExportData()">Email</button>
+        <button class="modal-btn" id="export-reminder-btn" onclick="toggleReminderModal()">Add Reminder to Calendar</button>
+        <button class="close-btn" id="export-cancel-btn" onclick="toggleExportModal()">Cancel</button>
+    </div>
+
+    <!-- CALENDAR REMINDER MODAL -->
+    <div id="reminder-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="reminder-modal-title">
+        <h2 id="reminder-modal-title">Add Reminder to Calendar</h2>
+        <p class="hint" id="reminder-hint">Downloads a .ics file you can import into your own calendar app — a daily recurring reminder, using your device's local time.</p>
+        <label for="reminder-time-input" id="reminder-time-label" class="hint">Reminder time</label>
+        <input type="time" id="reminder-time-input" value="09:00">
+        <button class="modal-btn" id="reminder-download-btn" onclick="downloadReminderIcs()">Download Reminder</button>
+        <button class="close-btn" id="reminder-cancel-btn" onclick="toggleReminderModal()">Cancel</button>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const defaultQuestions = [
+            "Did you drink enough water today?",
+            "Did you take your medication today?",
+            "Did you get enough sleep last night?"
+        ];
+        // Used only to seed a first run / migrate old data. Weekly questions
+        // are fully editable afterward, same as daily ones.
+        const defaultWeeklyQuestions = [
+            "Did you exercise at least 3 times this week?",
+            "Did you eat balanced meals this week?"
+        ];
+        const weeklyTriggerDay = 0; // 0=Sun
+        const contactEmail = "rewindingsunflower@proton.me";
+        // ---------------------
+
+        // --- TRANSLATIONS ---
+        const translations = {
+            en: {
+                menuBtn: "MENU",
+                menuTitle: "Menu",
+                calendarTitle: "Calendar",
+                todayLabel: "today",
+                menuCalendar: "Calendar",
+                menuExport: "Export Data",
+                menuImport: "Import Data",
+                menuHowto: "How to Use",
+                menuLang: "Switch to Nederlands",
+                menuAdd: "Add Question",
+                menuList: "List Questions",
+                yes: "YES",
+                no: "NO",
+                skipForNow: "Skip this for now",
+                skippedStatus: "Skipped — you'll see it again later today",
+                allDone: "All done!",
+                noQuestions: "No questions. Tap MENU > Add Question.",
+                weeklyCheckin: "Weekly Check-in",
+                recorded: "Recorded:",
+                weekly: "Weekly",
+                currentQuestions: "Current Questions",
+                filterAll: "All",
+                filterQuestionsLabel: "Filter questions",
+                dailyQuestionsLabel: "Daily",
+                weeklyQuestionsLabel: "Weekly",
+                noWeeklyQuestions: "No weekly questions yet.",
+                addQuestionTitle: "Add Question",
+                editQuestionTitle: "Edit Question",
+                addHint: "Choose Daily or Weekly, then Save.",
+                editHint: "Update the question text, then Save.",
+                freqDaily: "Daily",
+                freqWeekly: "Weekly",
+                editLabel: "Edit",
+                deleteLabel: "Delete",
+                deleteQuestionTitle: "Delete Question",
+                deleteConfirmPrefix: "Delete",
+                deleteConfirmNote: "Its logged history will stay, just no longer be shown.",
+                addPlaceholder: "Type question...",
+                save: "Save",
+                cancel: "Cancel",
+                close: "Close",
+                statsTitle: "Question Stats",
+                statsNoData: "No data yet. Answer a few check-ins first.",
+                statsAnswered: "answered",
+                calendarAllLabel: "Showing: all questions combined",
+                calendarShowingLabel: "Showing",
+                noEntryLabel: "No entry",
+                searchPlaceholder: "Search questions...",
+                searchMatchesLabel: "matches",
+                searchNoMatches: "No questions match your search.",
+                menuAbout: "About",
+                menuContact: "Contact",
+                aboutTitle: "About",
+                aboutBody: [
+                    "Daily Check is a simple, private habit tracker. It asks a few yes/no questions each day (and, on the day you choose, a weekly set too), and keeps a record you can look back on.",
+                    "All your data — questions, answers, and settings — stays on this device only, saved in your browser's local storage. Nothing is sent to any server, and no account is required.",
+                    "Export Data lets you save or email a backup whenever you like; Import Data loads one back in."
+                ],
+                contactSubject: "Daily Check Feedback",
+                contactHint: "If you've hit an issue or have a suggestion, it helps a lot to include what device and browser you're using, and what you were doing when it happened. Tapping below will pre-fill that for you — just fill in the rest.",
+                contactSendBtn: "Send Feedback",
+                contactDeviceLabel: "Device/Browser",
+                contactIssueLabel: "What issue are you experiencing?",
+                contactSuggestionLabel: "Any suggestions?",
+                contactFallbackHint: "Opens whichever mail app is set as your device's default. If that's not the one you want to use:",
+                contactCopyBtn: "Copy Email Address",
+                contactCopiedStatus: "Copied to clipboard.",
+                contactCopyFailedStatus: "Couldn't copy automatically — the address above is selectable, so you can copy it by hand.",
+                contactCopied: "Copied!",
+                contactCopyFailed: "Couldn't copy automatically — the address above is selectable, so you can still copy it by hand.",
+                howtoTitle: "How to Use",
+                howtoBody: [
+                    "Answer each question <b>YES</b> or <b>NO</b> once a day. Your answers are saved automatically on this device.",
+                    "Use <b>Skip this for now</b> if you're not ready to answer a question — it comes back around later in the same session so you can still answer it today.",
+                    "Open <b>MENU</b> to reach the Calendar (a 7 or 30 day overview) and the question list. Inside Calendar, tap a question below the grid to see that question's own yes/no pattern day by day.",
+                    "Use <b>Add Question</b> to add a new daily or weekly question. In <b>List Questions</b>, use <b>Edit</b> to change a question's wording (its history stays linked) or <b>Delete</b> to remove it (you'll be asked to confirm).",
+                    "Use <b>Export Data</b> to save a backup .txt file, and <b>Import Data</b> to load one back in.",
+                    "The language switch only changes the app's own text — questions you typed yourself stay as written."
+                ],
+                noDataExport: "No data to export yet.",
+                exportDownload: "Download File",
+                exportEmail: "Email",
+                exportLargeWarning: "This log is fairly long. Some email apps cut off long messages — downloading the file guarantees you get everything. Continue with email anyway?",
+                addReminderLabel: "Add Reminder to Calendar",
+                reminderHint: "Downloads a .ics file you can import into your own calendar app — a daily recurring reminder, using your device's local time.",
+                reminderTimeLabel: "Reminder time",
+                reminderDownloadBtn: "Download Reminder",
+                importedMsg: (logs, questions) => `Imported ${logs} answer${logs === 1 ? '' : 's'} and ${questions} new question${questions === 1 ? '' : 's'}. Refreshing...`,
+                added: "Added!",
+                exists: "Already exists!",
+                removed: "Removed!",
+                renamed: "Renamed!",
+                notFound: "Not found.",
+                dayHeaders: ["Su","Mo","Tu","We","Th","Fr","Sa"]
+            },
+            nl: {
+                menuBtn: "MENU",
+                menuTitle: "Menu",
+                calendarTitle: "Kalender",
+                todayLabel: "vandaag",
+                menuCalendar: "Kalender",
+                menuExport: "Gegevens Exporteren",
+                menuImport: "Gegevens Importeren",
+                menuHowto: "Hoe te Gebruiken",
+                menuLang: "Overschakelen naar English",
+                menuAdd: "Vraag Toevoegen",
+                menuList: "Vragenlijst",
+                yes: "JA",
+                no: "NEE",
+                skipForNow: "Deze voor nu overslaan",
+                skippedStatus: "Overgeslagen — je ziet hem later vandaag terug",
+                allDone: "Helemaal klaar!",
+                noQuestions: "Geen vragen. Tik op MENU > Vraag Toevoegen.",
+                weeklyCheckin: "Wekelijkse Check-in",
+                recorded: "Genoteerd:",
+                weekly: "Wekelijks",
+                currentQuestions: "Huidige Vragen",
+                filterAll: "Alles",
+                filterQuestionsLabel: "Vragen filteren",
+                dailyQuestionsLabel: "Dagelijks",
+                weeklyQuestionsLabel: "Wekelijks",
+                noWeeklyQuestions: "Nog geen wekelijkse vragen.",
+                addQuestionTitle: "Vraag Toevoegen",
+                editQuestionTitle: "Vraag Bewerken",
+                addHint: "Kies Dagelijks of Wekelijks, en sla op.",
+                editHint: "Werk de vraagtekst bij en sla op.",
+                freqDaily: "Dagelijks",
+                freqWeekly: "Wekelijks",
+                editLabel: "Bewerken",
+                deleteLabel: "Verwijderen",
+                deleteQuestionTitle: "Vraag Verwijderen",
+                deleteConfirmPrefix: "Verwijderen:",
+                deleteConfirmNote: "De geregistreerde geschiedenis blijft bestaan, maar wordt niet meer getoond.",
+                addPlaceholder: "Typ vraag...",
+                save: "Opslaan",
+                cancel: "Annuleren",
+                close: "Sluiten",
+                statsTitle: "Vraag Statistieken",
+                statsNoData: "Nog geen gegevens. Beantwoord eerst een paar check-ins.",
+                statsAnswered: "beantwoord",
+                calendarAllLabel: "Weergegeven: alle vragen samen",
+                calendarShowingLabel: "Weergegeven",
+                noEntryLabel: "Geen invoer",
+                searchPlaceholder: "Vragen zoeken...",
+                searchMatchesLabel: "resultaten",
+                searchNoMatches: "Geen vragen komen overeen met je zoekopdracht.",
+                menuAbout: "Over",
+                menuContact: "Contact",
+                aboutTitle: "Over",
+                aboutBody: [
+                    "Daily Check is een eenvoudige, privé gewoontetracker. Elke dag stelt hij een paar ja/nee-vragen (en, op de dag die je zelf kiest, ook een wekelijkse set), en houdt een overzicht bij waar je op kunt terugkijken.",
+                    "Al je gegevens — vragen, antwoorden en instellingen — blijven alleen op dit apparaat, opgeslagen in de lokale opslag van je browser. Er wordt niets naar een server gestuurd en er is geen account nodig.",
+                    "Met Gegevens Exporteren kun je op elk moment een back-up opslaan of mailen; met Gegevens Importeren laad je er weer een in."
+                ],
+                contactSubject: "Daily Check Feedback",
+                contactHint: "Als je een probleem bent tegengekomen of een suggestie hebt, helpt het enorm als je vermeldt welk apparaat en welke browser je gebruikt, en wat je aan het doen was toen het gebeurde. Als je hieronder tikt, wordt dit alvast voor je ingevuld — vul de rest zelf aan.",
+                contactSendBtn: "Feedback Versturen",
+                contactDeviceLabel: "Apparaat/Browser",
+                contactIssueLabel: "Welk probleem ondervind je?",
+                contactSuggestionLabel: "Heb je suggesties?",
+                contactFallbackHint: "Opent de mailapp die als standaard is ingesteld op je apparaat. Is dat niet degene die je wilt gebruiken?",
+                contactCopyBtn: "E-mailadres Kopiëren",
+                contactCopiedStatus: "Gekopieerd naar klembord.",
+                contactCopyFailedStatus: "Automatisch kopiëren is niet gelukt — het adres hierboven is selecteerbaar, dus je kunt het handmatig kopiëren.",
+                contactCopied: "Gekopieerd!",
+                contactCopyFailed: "Kon niet automatisch kopiëren — het adres hierboven is selecteerbaar, dus je kunt het nog steeds handmatig kopiëren.",
+                howtoTitle: "Hoe te Gebruiken",
+                howtoBody: [
+                    "Beantwoord elke vraag één keer per dag met <b>JA</b> of <b>NEE</b>. Je antwoorden worden automatisch opgeslagen op dit apparaat.",
+                    "Gebruik <b>Deze voor nu overslaan</b> als je een vraag nog niet wilt beantwoorden — hij komt later in dezelfde sessie terug, zodat je hem vandaag nog kunt beantwoorden.",
+                    "Open <b>MENU</b> voor de Kalender (een overzicht van 7 of 30 dagen) en de vragenlijst. Tik in de Kalender op een vraag onder het rooster om het ja/nee-patroon van die vraag per dag te zien.",
+                    "Gebruik <b>Vraag Toevoegen</b> om een nieuwe dagelijkse of wekelijkse vraag toe te voegen. Gebruik in <b>Vragenlijst</b> de knop <b>Bewerken</b> om de tekst van een vraag aan te passen (de geschiedenis blijft gekoppeld) of <b>Verwijderen</b> om er een te verwijderen (je krijgt om bevestiging gevraagd).",
+                    "Gebruik <b>Gegevens Exporteren</b> om een back-up .txt bestand op te slaan, en <b>Gegevens Importeren</b> om er een terug te laden.",
+                    "De taalwissel verandert alleen de tekst van de app zelf — vragen die je zelf hebt getypt blijven zoals geschreven."
+                ],
+                noDataExport: "Nog geen gegevens om te exporteren.",
+                exportDownload: "Bestand Downloaden",
+                exportEmail: "E-mail",
+                exportLargeWarning: "Dit logboek is vrij lang. Sommige e-mailapps knippen lange berichten af — een bestand downloaden garandeert dat je alles krijgt. Toch doorgaan met e-mail?",
+                addReminderLabel: "Herinnering Toevoegen aan Agenda",
+                reminderHint: "Downloadt een .ics-bestand dat je in je eigen agenda-app kunt importeren — een dagelijks terugkerende herinnering, op de lokale tijd van je apparaat.",
+                reminderTimeLabel: "Tijdstip herinnering",
+                reminderDownloadBtn: "Herinnering Downloaden",
+                importedMsg: (logs, questions) => `${logs} antwoord${logs === 1 ? '' : 'en'} en ${questions} nieuwe vra${questions === 1 ? 'ag' : 'gen'} geïmporteerd. Vernieuwen...`,
+                added: "Toegevoegd!",
+                exists: "Bestaat al!",
+                removed: "Verwijderd!",
+                renamed: "Hernoemd!",
+                notFound: "Niet gevonden.",
+                dayHeaders: ["Zo","Ma","Di","Wo","Do","Vr","Za"]
+            }
+        };
+
+        function getLang() {
+            return localStorage.getItem('app_lang') || 'en';
+        }
+        function t(key) {
+            return translations[getLang()][key];
+        }
+
+        const dayDisplay = document.getElementById('day-display');
+        const dateDisplay = document.getElementById('date-display');
+        const questionText = document.getElementById('question-text');
+        const statusEl = document.getElementById('status');
+        const calendarGrid = document.getElementById('calendar-grid');
+        const btn7d = document.getElementById('btn-7d');
+        const btn30d = document.getElementById('btn-30d');
+
+        let currentQueue = [];
+        let skippedQueue = []; // questions skipped for now, re-asked later the same session
+        let currentIndex = 0;
+        let currentQuestionName = "";
+        let currentQuestionId = "";
+        let calViewDays = 7;
+
+        // Builds a stable id from question text, then disambiguates against
+        // any ids already in use so two questions can never collide.
+        function makeUniqueId(text, existingIds) {
+            const base = safeNameFor(text) || 'q';
+            let id = base;
+            let n = 2;
+            while (existingIds.has(id)) {
+                id = `${base}_${n}`;
+                n++;
+            }
+            return id;
+        }
+
+        // Questions are stored together as [{id, text, freq}, ...] where
+        // freq is 'daily' or 'weekly'. The id is assigned once at creation
+        // and never changes, so renaming a question's text later does not
+        // disconnect it from its logged history.
+        function getAllQuestions() {
+            const saved = localStorage.getItem('my_questions');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+
+            // Migrate from the old model: daily questions lived under
+            // 'my_daily_questions' (editable, possibly legacy plain-string
+            // array); weekly questions were a fixed, non-editable constant
+            // and were never persisted. Fold both into the unified store,
+            // preserving ids so existing logged history keeps matching.
+            const dailyRaw = localStorage.getItem('my_daily_questions');
+            let daily;
+            if (dailyRaw) {
+                let parsed = JSON.parse(dailyRaw);
+                if (parsed.length && typeof parsed[0] === 'string') {
+                    const existingIds = new Set();
+                    parsed = parsed.map(text => {
+                        const id = makeUniqueId(text, existingIds);
+                        existingIds.add(id);
+                        return { id, text };
+                    });
+                }
+                daily = parsed.map(q => ({ id: q.id, text: q.text, freq: 'daily' }));
+            } else {
+                const existingIds = new Set();
+                daily = defaultQuestions.map(text => {
+                    const id = makeUniqueId(text, existingIds);
+                    existingIds.add(id);
+                    return { id, text, freq: 'daily' };
+                });
+            }
+
+            const weeklyIds = new Set();
+            const weekly = defaultWeeklyQuestions.map(text => {
+                const id = makeUniqueId(text, weeklyIds);
+                weeklyIds.add(id);
+                return { id, text, freq: 'weekly' };
+            });
+
+            const all = [...daily, ...weekly];
+            localStorage.setItem('my_questions', JSON.stringify(all));
+            localStorage.removeItem('my_daily_questions');
+            return all;
+        }
+
+        function saveAllQuestions(list) {
+            localStorage.setItem('my_questions', JSON.stringify(list));
+        }
+
+        function getDailyQuestions() {
+            return getAllQuestions().filter(q => q.freq === 'daily');
+        }
+
+        function getWeeklyQuestions() {
+            return getAllQuestions().filter(q => q.freq === 'weekly');
+        }
+
+        function safeNameFor(question) {
+            return question.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+
+        // Local calendar date as YYYY-MM-DD (NOT toISOString, which is UTC and
+        // shifts the date near midnight for anyone not at UTC+0).
+        function localDateStr(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // --- LANGUAGE ---
+        function applyLanguage() {
+            const lang = getLang();
+            const tr = translations[lang];
+
+            document.documentElement.lang = lang;
+
+            document.getElementById('menu-btn-label').textContent = tr.menuBtn;
+            document.getElementById('menu-title').textContent = tr.menuTitle;
+            document.getElementById('menu-calendar').textContent = tr.menuCalendar;
+            document.getElementById('menu-export').textContent = tr.menuExport;
+            document.getElementById('menu-import').textContent = tr.menuImport;
+            document.getElementById('menu-howto').textContent = tr.menuHowto;
+            document.getElementById('menu-about').textContent = tr.menuAbout;
+            document.getElementById('menu-contact').textContent = tr.menuContact;
+            document.getElementById('menu-lang').textContent = tr.menuLang;
+            document.getElementById('menu-add').textContent = tr.menuAdd;
+            document.getElementById('menu-list').textContent = tr.menuList;
+
+            document.getElementById('yes-btn').textContent = tr.yes;
+            document.getElementById('no-btn').textContent = tr.no;
+            document.getElementById('skip-link').textContent = tr.skipForNow;
+
+            document.getElementById('calendar-title').textContent = tr.calendarTitle;
+            document.getElementById('calendar-stats-heading').textContent = tr.statsTitle;
+            document.getElementById('stats-search-input').placeholder = tr.searchPlaceholder;
+            document.getElementById('stats-search-input').setAttribute('aria-label', tr.searchPlaceholder);
+            document.getElementById('howto-title').textContent = tr.howtoTitle;
+            document.getElementById('howto-content').innerHTML = tr.howtoBody.map(p => `<p>${p}</p>`).join('');
+
+            document.getElementById('about-title').textContent = tr.aboutTitle;
+            document.getElementById('about-content').innerHTML = tr.aboutBody.map(p => `<p>${p}</p>`).join('');
+
+            document.getElementById('contact-modal-title').textContent = tr.menuContact;
+            document.getElementById('contact-hint').textContent = tr.contactHint;
+            document.getElementById('contact-send-btn').textContent = tr.contactSendBtn;
+            document.getElementById('contact-fallback-hint').textContent = tr.contactFallbackHint;
+            document.getElementById('contact-email-display').textContent = contactEmail;
+            document.getElementById('contact-copy-btn').textContent = tr.contactCopyBtn;
+            document.getElementById('contact-cancel-btn').textContent = tr.cancel;
+
+            document.getElementById('close-menu-btn').textContent = tr.close;
+            document.getElementById('close-calendar-btn').textContent = tr.close;
+            document.getElementById('close-howto-btn').textContent = tr.close;
+            document.getElementById('close-about-btn').textContent = tr.close;
+
+            document.getElementById('list-modal-title').textContent = tr.currentQuestions;
+            document.getElementById('list-filter-group').setAttribute('aria-label', tr.filterQuestionsLabel);
+            document.getElementById('list-filter-all').textContent = tr.filterAll;
+            document.getElementById('list-filter-daily').textContent = tr.dailyQuestionsLabel;
+            document.getElementById('list-filter-weekly').textContent = tr.weeklyQuestionsLabel;
+            document.getElementById('list-close-btn').textContent = tr.close;
+            document.getElementById('add-modal-title').textContent = addModalMode === 'edit' ? tr.editQuestionTitle : tr.addQuestionTitle;
+            document.getElementById('add-input').placeholder = tr.addPlaceholder;
+            document.getElementById('add-hint').textContent = addModalMode === 'edit' ? tr.editHint : tr.addHint;
+            document.getElementById('freq-daily-btn').textContent = tr.freqDaily;
+            document.getElementById('freq-weekly-btn').textContent = tr.freqWeekly;
+            document.getElementById('save-btn').textContent = tr.save;
+            document.getElementById('cancel-btn').textContent = tr.cancel;
+
+            document.getElementById('delete-confirm-title').textContent = tr.deleteQuestionTitle;
+            document.getElementById('delete-confirm-btn').textContent = tr.deleteLabel;
+            document.getElementById('delete-cancel-btn').textContent = tr.cancel;
+
+            document.getElementById('export-modal-title').textContent = tr.menuExport;
+            document.getElementById('export-download-btn').textContent = tr.exportDownload;
+            document.getElementById('export-email-btn').textContent = tr.exportEmail;
+            document.getElementById('export-reminder-btn').textContent = tr.addReminderLabel;
+            document.getElementById('export-cancel-btn').textContent = tr.cancel;
+
+            document.getElementById('reminder-modal-title').textContent = tr.addReminderLabel;
+            document.getElementById('reminder-hint').textContent = tr.reminderHint;
+            document.getElementById('reminder-time-label').textContent = tr.reminderTimeLabel;
+            document.getElementById('reminder-download-btn').textContent = tr.reminderDownloadBtn;
+            document.getElementById('reminder-cancel-btn').textContent = tr.cancel;
+
+            // Calendar day headers (decorative — each day cell carries its own
+            // full date + status in aria-label, so hide these from screen readers
+            // to avoid redundant announcements).
+            const headerCells = tr.dayHeaders.map(d => `<div class="cal-day-header" aria-hidden="true">${d}</div>`).join('');
+            calendarGrid.innerHTML = headerCells;
+        }
+
+        // Shows the current weekday and date fully written out, e.g.
+        // "Monday" / "August 24", instead of abbreviated forms.
+        function updateHeaderDate() {
+            const now = new Date();
+            const locale = getLang() === 'nl' ? 'nl-NL' : undefined;
+            dayDisplay.textContent = now.toLocaleDateString(locale, { weekday: 'long' });
+            dateDisplay.textContent = now.toLocaleDateString(locale, { month: 'long', day: 'numeric' });
+        }
+
+        function toggleLanguage() {
+            const current = getLang();
+            const next = current === 'en' ? 'nl' : 'en';
+            localStorage.setItem('app_lang', next);
+            applyLanguage();
+            updateHeaderDate();
+            // Refresh whatever is currently on screen
+            if (questionText.dataset.stateKey) refreshCurrentQuestionDisplay();
+        }
+
+        function refreshCurrentQuestionDisplay() {
+            const state = questionText.dataset.stateKey;
+            if (state === 'noQuestions') questionText.textContent = t('noQuestions');
+            else if (state === 'allDone') questionText.textContent = t('allDone');
+            else if (state === 'weekly') questionText.textContent = t('weeklyCheckin');
+        }
+
+        // --- INIT ---
+        // A question counts as "already handled today" if there's a YES/NO
+        // log entry for it under today's date — skipped-for-now doesn't log
+        // anything, so those correctly remain in the queue.
+        function isAnsweredToday(questionId) {
+            const key = `log_${localDateStr(new Date())}_${questionId}`;
+            const val = localStorage.getItem(key);
+            return val === 'YES' || val === 'NO';
+        }
+
+        function init() {
+            applyLanguage();
+            updateHeaderDate();
+
+            const now = new Date();
+            const dayNum = now.getDay();
+            const allDailyQs = getDailyQuestions();
+            const dailyQs = allDailyQs.filter(q => !isAnsweredToday(q.id));
+            currentQueue = [...dailyQs];
+            currentIndex = 0;
+            skippedQueue = [];
+
+            const allWeeklyQs = getWeeklyQuestions();
+            const isWeeklyDay = dayNum === weeklyTriggerDay && allWeeklyQs.length > 0;
+            if (isWeeklyDay) {
+                const weeklyQs = allWeeklyQs.filter(q => !isAnsweredToday(q.id));
+                if (weeklyQs.length > 0) {
+                    currentQueue.push("=== WEEKLY ===");
+                    currentQueue = currentQueue.concat(weeklyQs);
+                }
+            }
+
+            const totalConfigured = allDailyQs.length + (isWeeklyDay ? allWeeklyQs.length : 0);
+
+            if (totalConfigured === 0) {
+                // No questions exist at all — genuinely nothing to ask.
+                showEmptyState();
+            } else {
+                // Either there's something left to answer, or everything for
+                // today is already done — loadNext() handles both correctly.
+                loadNext();
+            }
+        }
+
+        function showEmptyState() {
+            questionText.textContent = t('noQuestions');
+            questionText.dataset.stateKey = 'noQuestions';
+            document.querySelector('.btn-group').style.display = 'none';
+            document.getElementById('skip-link').style.display = 'none';
+        }
+
+        function loadNext() {
+            // Bring back any questions skipped earlier this session before
+            // declaring the day done, so they can still be answered today.
+            if (currentIndex >= currentQueue.length && skippedQueue.length > 0) {
+                currentQueue = currentQueue.concat(skippedQueue);
+                skippedQueue = [];
+            }
+
+            if (currentIndex >= currentQueue.length) {
+                questionText.textContent = t('allDone');
+                questionText.dataset.stateKey = 'allDone';
+                document.querySelector('.btn-group').style.display = 'none';
+                document.getElementById('skip-link').style.display = 'none';
+                statusEl.textContent = "";
+                return;
+            }
+
+            document.querySelector('.btn-group').style.display = 'flex';
+            document.getElementById('skip-link').style.display = 'inline-block';
+
+            const item = currentQueue[currentIndex];
+            if (item === "=== WEEKLY ===") {
+                questionText.textContent = t('weeklyCheckin');
+                questionText.dataset.stateKey = 'weekly';
+                statusEl.textContent = t('weekly');
+                document.querySelector('.btn-group').style.display = 'none';
+                document.getElementById('skip-link').style.display = 'none';
+                setTimeout(() => {
+                    currentIndex++;
+                    loadNext();
+                }, 1000);
+            } else {
+                currentQuestionName = item.text;
+                currentQuestionId = item.id;
+                questionText.textContent = item.text;
+                questionText.dataset.stateKey = '';
+                statusEl.textContent = `${currentIndex + 1}/${currentQueue.length}`;
+            }
+        }
+
+        function record(answer) {
+            const ansStr = answer ? "YES" : "NO";
+            const logKey = `log_${localDateStr(new Date())}_${currentQuestionId}`;
+            localStorage.setItem(logKey, ansStr);
+
+            statusEl.textContent = `${t('recorded')} ${answer ? t('yes') : t('no')}`;
+            document.querySelector('.btn-group').style.opacity = '0.5';
+
+            setTimeout(() => {
+                document.querySelector('.btn-group').style.opacity = '1';
+                currentIndex++;
+                loadNext();
+            }, 400);
+        }
+
+        // Skip just the current question for now — it's queued to come back
+        // around later in the same session, so it can still be answered today.
+        function skipForNow() {
+            skippedQueue.push({ id: currentQuestionId, text: currentQuestionName });
+
+            statusEl.textContent = t('skippedStatus');
+            document.querySelector('.btn-group').style.opacity = '0.5';
+
+            setTimeout(() => {
+                document.querySelector('.btn-group').style.opacity = '1';
+                currentIndex++;
+                loadNext();
+            }, 400);
+        }
+
+        // --- DIALOG / OVERLAY ACCESSIBILITY HELPERS ---
+        // Any full-screen overlay or modal in this app should: move focus into
+        // itself when opened, trap Tab navigation inside itself, close on
+        // Escape, and return focus to whatever triggered it when closed.
+        let activeOverlayEl = null;
+        let preOverlayFocusEl = null;
+
+        function getFocusable(container) {
+            return Array.from(
+                container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+            ).filter(el => !el.disabled && el.offsetParent !== null);
+        }
+
+        function onOverlayKeydown(e) {
+            if (!activeOverlayEl) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeActiveOverlay();
+                return;
+            }
+            if (e.key === 'Tab') {
+                const focusable = getFocusable(activeOverlayEl);
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        }
+
+        function openOverlay(overlayEl) {
+            preOverlayFocusEl = document.activeElement;
+            overlayEl.style.display = 'flex';
+            activeOverlayEl = overlayEl;
+            document.removeEventListener('keydown', onOverlayKeydown);
+            document.addEventListener('keydown', onOverlayKeydown);
+            const focusable = getFocusable(overlayEl);
+            if (focusable.length) focusable[0].focus();
+            if (overlayEl.id === 'menu-overlay') {
+                document.getElementById('menu-btn-label').setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        function closeActiveOverlay() {
+            if (!activeOverlayEl) return;
+            const wasMenu = activeOverlayEl.id === 'menu-overlay';
+            activeOverlayEl.style.display = 'none';
+            activeOverlayEl = null;
+            document.removeEventListener('keydown', onOverlayKeydown);
+            if (wasMenu) {
+                document.getElementById('menu-btn-label').setAttribute('aria-expanded', 'false');
+            }
+            if (preOverlayFocusEl && typeof preOverlayFocusEl.focus === 'function') {
+                preOverlayFocusEl.focus();
+            }
+        }
+
+        // --- MENU ---
+        function toggleMenu() {
+            const overlay = document.getElementById('menu-overlay');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                openOverlay(overlay);
+            }
+        }
+        function fromMenu(fn) {
+            toggleMenu();
+            fn();
+        }
+
+        // --- EXPORT FUNCTIONS ---
+        function buildExportLogText() {
+            const questions = getAllQuestions();
+            const logKeys = Object.keys(localStorage).filter(k => k.startsWith('log_')).sort();
+
+            if (questions.length === 0 && logKeys.length === 0) {
+                return null;
+            }
+
+            let text = "Daily Check Log\n=================\n\n";
+
+            text += "[QUESTIONS]\n";
+            questions.forEach(q => {
+                // Tab-delimited: freq, id, text. Text is last so it can safely
+                // contain any character except a literal tab.
+                text += `${q.freq}\t${q.id}\t${q.text}\n`;
+            });
+
+            text += "\n[LOGS]\n";
+            logKeys.forEach(key => {
+                const value = localStorage.getItem(key);
+                text += `${key.replace('log_', '')}: ${value}\n`;
+            });
+
+            return text;
+        }
+
+        function downloadExportFile() {
+            const logText = buildExportLogText();
+            if (!logText) {
+                alert(t('noDataExport'));
+                return;
+            }
+
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `daily_check_log_${localDateStr(new Date())}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toggleExportModal();
+        }
+
+        // Opens the person's own mail app with the log pre-filled via a plain
+        // mailto: link. Nothing is transmitted to, or stored on, any server —
+        // the app never sees where it's sent, only the local mail client does.
+        function emailExportData() {
+            const logText = buildExportLogText();
+            if (!logText) {
+                alert(t('noDataExport'));
+                return;
+            }
+
+            // Most mail clients truncate very long mailto bodies; warn rather
+            // than silently lose data, and point to the complete file instead.
+            if (logText.length > 1800 && !confirm(t('exportLargeWarning'))) {
+                return;
+            }
+
+            const subject = encodeURIComponent(`Daily Check Log — ${localDateStr(new Date())}`);
+            const body = encodeURIComponent(logText);
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+            toggleExportModal();
+        }
+
+        function toggleExportModal() {
+            const overlay = document.getElementById('export-modal');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                openOverlay(overlay);
+            }
+        }
+
+        // --- IMPORT FUNCTION ---
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+
+                // Default to 'logs' so old export files (which had no section
+                // headers at all — questions were never included before this
+                // fix) still import exactly as they used to.
+                let section = 'logs';
+                let importedLogCount = 0;
+                let importedQuestionCount = 0;
+
+                const existingQuestions = getAllQuestions();
+                const existingIds = new Set(existingQuestions.map(q => q.id));
+                const newQuestions = [];
+
+                lines.forEach(rawLine => {
+                    const line = rawLine.trim();
+                    if (!line) return;
+
+                    if (line === '[QUESTIONS]') { section = 'questions'; return; }
+                    if (line === '[LOGS]') { section = 'logs'; return; }
+
+                    if (section === 'questions') {
+                        const parts = line.split('\t');
+                        if (parts.length === 3) {
+                            const [freq, id, text] = parts;
+                            if ((freq === 'daily' || freq === 'weekly') && id && text && !existingIds.has(id)) {
+                                newQuestions.push({ id, text, freq });
+                                existingIds.add(id);
+                                importedQuestionCount++;
+                            }
+                        }
+                        return;
+                    }
+
+                    if (line.includes(':')) {
+                        const colonIdx = line.indexOf(':');
+                        const keyPart = line.substring(0, colonIdx).trim();
+                        const value = line.substring(colonIdx + 1).trim();
+                        if (keyPart && (value === 'YES' || value === 'NO' || value === 'SKIP')) {
+                            localStorage.setItem(`log_${keyPart}`, value);
+                            importedLogCount++;
+                        }
+                    }
+                });
+
+                if (newQuestions.length > 0) {
+                    saveAllQuestions([...existingQuestions, ...newQuestions]);
+                }
+
+                alert(t('importedMsg')(importedLogCount, importedQuestionCount));
+                renderCalendar(calViewDays);
+                input.value = '';
+
+                // If the current session was already finished or empty,
+                // rebuild it so newly imported questions/answers show up
+                // immediately rather than needing a manual reload.
+                if (questionText.dataset.stateKey === 'allDone' || questionText.dataset.stateKey === 'noQuestions') {
+                    init();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- CALENDAR + STATS LOGIC (combined) ---
+        // selectedStatsQuestionId: null = calendar shows the aggregate "any
+        // question answered yes" view (as before). Set to a question's id to
+        // instead show that single question's day-by-day yes/no/no-entry
+        // pattern — the "reality check" view.
+        let selectedStatsQuestionId = null;
+
+        function toggleCalendar() {
+            const overlay = document.getElementById('calendar-overlay');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                selectedStatsQuestionId = null;
+                document.getElementById('stats-search-input').value = '';
+                renderCalendar(calViewDays);
+                renderCalendarStatsList();
+                openOverlay(overlay);
+            }
+        }
+
+        function setCalView(days) {
+            calViewDays = days;
+            btn7d.classList.toggle('active', days === 7);
+            btn7d.setAttribute('aria-pressed', String(days === 7));
+            btn30d.classList.toggle('active', days === 30);
+            btn30d.setAttribute('aria-pressed', String(days === 30));
+            renderCalendar(days);
+        }
+
+        function allStatsQuestions() {
+            return getAllQuestions();
+        }
+
+        function findQuestionById(qid) {
+            return allStatsQuestions().find(q => q.id === qid) || null;
+        }
+
+        function renderCalendar(daysToShow) {
+            const tr = translations[getLang()];
+            calendarGrid.innerHTML = tr.dayHeaders.map(d => `<div class="cal-day-header" aria-hidden="true">${d}</div>`).join('');
+
+            const selectedQuestion = selectedStatsQuestionId ? findQuestionById(selectedStatsQuestionId) : null;
+
+            const modeLabel = document.getElementById('calendar-mode-label');
+            modeLabel.textContent = selectedQuestion
+                ? `${tr.calendarShowingLabel}: ${selectedQuestion.text}`
+                : tr.calendarAllLabel;
+
+            calendarGrid.setAttribute(
+                'aria-label',
+                selectedQuestion ? `${tr.calendarShowingLabel}: ${selectedQuestion.text}` : tr.calendarAllLabel
+            );
+
+            const today = new Date();
+            let gridStart = new Date(today);
+            gridStart.setDate(today.getDate() - daysToShow + 1);
+            while (gridStart.getDay() !== 0) {
+                gridStart.setDate(gridStart.getDate() - 1);
+            }
+
+            let currentDate = new Date(gridStart);
+            let endDate = new Date(today);
+
+            let totalCells = 0;
+            let temp = new Date(gridStart);
+            while (temp <= endDate) {
+                totalCells++;
+                temp.setDate(temp.getDate() + 1);
+            }
+            while (totalCells % 7 !== 0) totalCells++;
+
+            for (let i = 0; i < totalCells; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'cal-day';
+
+                if (currentDate > endDate || currentDate < gridStart) {
+                    dayDiv.className += ' empty';
+                    dayDiv.textContent = '';
+                    dayDiv.setAttribute('aria-hidden', 'true');
+                } else {
+                    dayDiv.setAttribute('role', 'listitem');
+                    const dateStr = localDateStr(currentDate);
+                    const dayNum = currentDate.getDate();
+
+                    let statusWord;
+                    let statusClass;
+
+                    if (selectedQuestion) {
+                        // Single-question view: distinguish yes / no / no entry at all.
+                        const key = `log_${dateStr}_${selectedQuestion.id}`;
+                        const val = localStorage.getItem(key);
+                        if (val === 'YES') { statusClass = 'yes'; statusWord = tr.yes; }
+                        else if (val === 'NO') { statusClass = 'no'; statusWord = tr.no; }
+                        else { statusClass = 'unanswered'; statusWord = tr.noEntryLabel; }
+                    } else {
+                        // Aggregate view: any question answered YES that day.
+                        let hasYes = false;
+                        for (let j = 0; j < localStorage.length; j++) {
+                            const key = localStorage.key(j);
+                            if (key.startsWith(`log_${dateStr}_`) && localStorage.getItem(key) === "YES") {
+                                hasYes = true;
+                                break;
+                            }
+                        }
+                        statusClass = hasYes ? 'yes' : 'no';
+                        statusWord = hasYes ? tr.yes : tr.no;
+                    }
+
+                    dayDiv.className += ' ' + statusClass;
+                    dayDiv.textContent = dayNum;
+
+                    const isToday = currentDate.getTime() === today.getTime();
+                    if (isToday) {
+                        dayDiv.className += ' today';
+                    }
+
+                    const readableDate = currentDate.toLocaleDateString(
+                        getLang() === 'nl' ? 'nl-NL' : undefined,
+                        { weekday: 'long', month: 'long', day: 'numeric' }
+                    );
+                    dayDiv.setAttribute(
+                        'aria-label',
+                        `${readableDate}${isToday ? ' (' + tr.todayLabel + ')' : ''}: ${statusWord}`
+                    );
+                }
+                calendarGrid.appendChild(dayDiv);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+
+        function questionCounts(qid) {
+            let yes = 0, no = 0, skip = 0;
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('log_') && k.endsWith(`_${qid}`));
+            keys.forEach(key => {
+                const val = localStorage.getItem(key);
+                if (val === 'YES') yes++;
+                else if (val === 'NO') no++;
+                else if (val === 'SKIP') skip++;
+            });
+            return { yes, no, skip, answered: yes + no };
+        }
+
+        function renderCalendarStatsList() {
+            const tr = translations[getLang()];
+            const container = document.getElementById('calendar-stats-list');
+            const countEl = document.getElementById('stats-search-count');
+            container.innerHTML = '';
+
+            const allQuestions = allStatsQuestions();
+            const anyLogs = Object.keys(localStorage).some(k => k.startsWith('log_'));
+
+            if (!anyLogs || allQuestions.length === 0) {
+                countEl.textContent = '';
+                container.innerHTML = `<div style="color:#999;">${tr.statsNoData}</div>`;
+                return;
+            }
+
+            const keyword = document.getElementById('stats-search-input').value.trim().toLowerCase();
+            const filteredQuestions = keyword
+                ? allQuestions.filter(q => q.text.toLowerCase().includes(keyword))
+                : allQuestions;
+
+            countEl.textContent = keyword
+                ? `${filteredQuestions.length} ${tr.searchMatchesLabel}`
+                : '';
+
+            if (filteredQuestions.length === 0) {
+                container.innerHTML = `<div style="color:#999;">${tr.searchNoMatches}</div>`;
+                return;
+            }
+
+            filteredQuestions.forEach(q => {
+                const counts = questionCounts(q.id);
+                const pct = counts.answered > 0 ? Math.round((counts.yes / counts.answered) * 100) : 0;
+                const isSelected = selectedStatsQuestionId === q.id;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'stat-row' + (isSelected ? ' selected' : '');
+                btn.setAttribute('aria-pressed', String(isSelected));
+                btn.setAttribute(
+                    'aria-label',
+                    `${q.text}: ${pct}% ${tr.yes}, ${counts.answered} ${tr.statsAnswered}${isSelected ? '. ' + tr.calendarShowingLabel : ''}`
+                );
+                btn.onclick = () => {
+                    selectedStatsQuestionId = isSelected ? null : q.id;
+                    renderCalendar(calViewDays);
+                    renderCalendarStatsList();
+                };
+
+                const skippedWord = getLang() === 'nl' ? 'overgeslagen' : 'skipped';
+                const detailHtml = isSelected
+                    ? `<div class="stat-detail">${tr.yes}: ${counts.yes} · ${tr.no}: ${counts.no}${counts.skip ? ' · ' + skippedWord + ': ' + counts.skip : ''}</div>`
+                    : '';
+
+                btn.innerHTML = `
+                    <div class="stat-q">${q.text}</div>
+                    <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;"></div></div>
+                    <div class="stat-nums">${pct}% ${tr.yes} · ${counts.answered} ${tr.statsAnswered}${counts.skip ? ' · ' + counts.skip + ' ' + skippedWord : ''}</div>
+                    ${detailHtml}
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        // --- HOW TO USE ---
+        function toggleHowTo() {
+            const overlay = document.getElementById('howto-overlay');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                openOverlay(overlay);
+            }
+        }
+
+        // --- ABOUT ---
+        function toggleAbout() {
+            const overlay = document.getElementById('about-overlay');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                openOverlay(overlay);
+            }
+        }
+
+        // --- CONTACT ---
+        function toggleContactModal() {
+            const overlay = document.getElementById('contact-modal');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                document.getElementById('contact-copy-status').textContent = '';
+                openOverlay(overlay);
+            }
+        }
+
+        // Best-effort, not exhaustive — just enough to save the person typing
+        // it themselves. They can correct it in the email if it's ever wrong.
+        function getDeviceSummary() {
+            const ua = navigator.userAgent || '';
+
+            let os = 'Unknown OS';
+            if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS';
+            else if (/Android/.test(ua)) os = 'Android';
+            else if (/Mac OS X/.test(ua)) os = 'macOS';
+            else if (/Windows/.test(ua)) os = 'Windows';
+            else if (/Linux/.test(ua)) os = 'Linux';
+
+            let browser = 'Unknown browser';
+            if (/Edg\//.test(ua)) browser = 'Edge';
+            else if (/OPR\//.test(ua)) browser = 'Opera';
+            else if (/Firefox\//.test(ua)) browser = 'Firefox';
+            else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
+            else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+
+            return `${os} / ${browser}`;
+        }
+
+        // Opens the user's own mail app via a plain mailto: link, addressed
+        // to the developer, pre-filled with a guided template. Nothing is
+        // sent to or stored on any server — the device/browser line is only
+        // ever read locally to build this link.
+        function openContactEmail() {
+            const tr = translations[getLang()];
+            const subject = encodeURIComponent(tr.contactSubject);
+            const bodyLines = [
+                `${tr.contactDeviceLabel}: ${getDeviceSummary()}`,
+                '',
+                `${tr.contactIssueLabel}`,
+                '',
+                '',
+                `${tr.contactSuggestionLabel}`,
+                ''
+            ];
+            const body = encodeURIComponent(bodyLines.join('\n'));
+            window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
+            toggleContactModal();
+        }
+
+        // Three-tier fallback so there's always a way to get the address,
+        // even in environments where the newer clipboard API is unavailable
+        // (e.g. the app opened as a local file rather than over https).
+        function copyContactEmail() {
+            const tr = translations[getLang()];
+            const statusEl = document.getElementById('contact-copy-status');
+
+            const showSuccess = () => { statusEl.textContent = tr.contactCopiedStatus; };
+            const showFailure = () => { statusEl.textContent = tr.contactCopyFailedStatus; };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(contactEmail).then(showSuccess, () => {
+                    if (!copyViaExecCommand()) showFailure();
+                    else showSuccess();
+                });
+            } else if (copyViaExecCommand()) {
+                showSuccess();
+            } else {
+                showFailure();
+            }
+        }
+
+        // Older fallback method — still widely supported, including in
+        // contexts (like file:// pages) where navigator.clipboard is not.
+        function copyViaExecCommand() {
+            try {
+                const temp = document.createElement('textarea');
+                temp.value = contactEmail;
+                temp.setAttribute('readonly', '');
+                temp.style.position = 'absolute';
+                temp.style.left = '-9999px';
+                document.body.appendChild(temp);
+                temp.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(temp);
+                return ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Three tiers: modern Clipboard API, then the older execCommand
+        // fallback (works in more contexts, including local file:// pages
+        // where the Clipboard API can silently fail), then — if both fail —
+        // a plain message pointing at the visible, selectable address above
+        // the button, so there's always a way to get it even without JS.
+        function copyContactEmail() {
+            const statusEl = document.getElementById('contact-copy-status');
+            const tr = translations[getLang()];
+
+            function showSuccess() {
+                statusEl.textContent = tr.contactCopySuccess;
+                setTimeout(() => { statusEl.textContent = ''; }, 3000);
+            }
+
+            function showFailure() {
+                statusEl.textContent = tr.contactCopyFailed;
+            }
+
+            function legacyFallbackCopy() {
+                try {
+                    const temp = document.createElement('textarea');
+                    temp.value = contactEmail;
+                    temp.setAttribute('readonly', '');
+                    temp.style.position = 'absolute';
+                    temp.style.left = '-9999px';
+                    document.body.appendChild(temp);
+                    temp.select();
+                    temp.setSelectionRange(0, contactEmail.length);
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(temp);
+                    successful ? showSuccess() : showFailure();
+                } catch (err) {
+                    showFailure();
+                }
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(contactEmail).then(showSuccess).catch(legacyFallbackCopy);
+            } else {
+                legacyFallbackCopy();
+            }
+        }
+
+        // Three-tier fallback, since the Clipboard API isn't reliable in every
+        // context (notably file:// pages, and older browsers). Worst case,
+        // the address is already shown as selectable text in the modal, so
+        // there's always a way to get it even if both copy methods fail.
+        async function copyContactEmail() {
+            const statusEl = document.getElementById('contact-copy-status');
+            const tr = translations[getLang()];
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(contactEmail);
+                    statusEl.textContent = tr.contactCopied;
+                    return;
+                } catch (err) {
+                    // fall through to legacy method
+                }
+            }
+
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = contactEmail;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                if (success) {
+                    statusEl.textContent = tr.contactCopied;
+                    return;
+                }
+            } catch (err) {
+                // fall through to final fallback
+            }
+
+            statusEl.textContent = tr.contactCopyFailed;
+        }
+
+        // --- MODAL LOGIC ---
+        // Add/Edit modal state. addModalMode is 'add' or 'edit'; editingQuestionId
+        // is set only in edit mode, identifying which question's text to update.
+        let addModalMode = 'add';
+        let editingQuestionId = null;
+        let addFreq = 'daily';
+
+        function setAddFreq(freq) {
+            addFreq = freq;
+            document.getElementById('freq-daily-btn').classList.toggle('active', freq === 'daily');
+            document.getElementById('freq-daily-btn').setAttribute('aria-pressed', String(freq === 'daily'));
+            document.getElementById('freq-weekly-btn').classList.toggle('active', freq === 'weekly');
+            document.getElementById('freq-weekly-btn').setAttribute('aria-pressed', String(freq === 'weekly'));
+        }
+
+        function openAddModal() {
+            addModalMode = 'add';
+            editingQuestionId = null;
+            document.getElementById('add-input').value = '';
+            setAddFreq('daily');
+            document.getElementById('add-modal-title').textContent = t('addQuestionTitle');
+            document.getElementById('add-freq-group').style.display = 'flex';
+            document.getElementById('add-hint').textContent = t('addHint');
+            document.getElementById('list-modal').style.display = 'none';
+            openOverlay(document.getElementById('add-modal'));
+        }
+
+        function openEditQuestion(id) {
+            const q = getAllQuestions().find(qq => qq.id === id);
+            if (!q) return;
+            addModalMode = 'edit';
+            editingQuestionId = id;
+            document.getElementById('add-input').value = q.text;
+            document.getElementById('add-modal-title').textContent = t('editQuestionTitle');
+            document.getElementById('add-freq-group').style.display = 'none';
+            document.getElementById('add-hint').textContent = t('editHint');
+            document.getElementById('list-modal').style.display = 'none';
+            openOverlay(document.getElementById('add-modal'));
+        }
+
+        function toggleAddModal() {
+            const addModal = document.getElementById('add-modal');
+            if (addModal.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                openAddModal();
+            }
+        }
+
+        function renderQuestionRow(container, q) {
+            const row = document.createElement('div');
+            row.className = 'list-row';
+
+            const textEl = document.createElement('span');
+            textEl.className = 'list-row-text';
+            textEl.textContent = q.text;
+            row.appendChild(textEl);
+
+            const actions = document.createElement('div');
+            actions.className = 'list-row-actions';
+
+            const tr = translations[getLang()];
+
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'list-action-btn';
+            editBtn.textContent = tr.editLabel;
+            editBtn.setAttribute('aria-label', `${tr.editLabel}: ${q.text}`);
+            editBtn.onclick = () => openEditQuestion(q.id);
+            actions.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'list-action-btn';
+            deleteBtn.textContent = tr.deleteLabel;
+            deleteBtn.setAttribute('aria-label', `${tr.deleteLabel}: ${q.text}`);
+            deleteBtn.onclick = () => confirmDeleteQuestion(q.id);
+            actions.appendChild(deleteBtn);
+
+            row.appendChild(actions);
+            container.appendChild(row);
+        }
+
+        let listFilter = 'all';
+
+        function setListFilter(filter) {
+            listFilter = filter;
+            document.getElementById('list-filter-all').classList.toggle('active', filter === 'all');
+            document.getElementById('list-filter-all').setAttribute('aria-pressed', String(filter === 'all'));
+            document.getElementById('list-filter-daily').classList.toggle('active', filter === 'daily');
+            document.getElementById('list-filter-daily').setAttribute('aria-pressed', String(filter === 'daily'));
+            document.getElementById('list-filter-weekly').classList.toggle('active', filter === 'weekly');
+            document.getElementById('list-filter-weekly').setAttribute('aria-pressed', String(filter === 'weekly'));
+            renderQuestionList();
+        }
+
+        function renderQuestionList() {
+            const tr = translations[getLang()];
+            const dailyQs = getDailyQuestions();
+            const weeklyQs = getWeeklyQuestions();
+            const content = document.getElementById('list-content');
+            content.innerHTML = '';
+
+            if (listFilter === 'all' || listFilter === 'daily') {
+                const dailyHeading = document.createElement('h3');
+                dailyHeading.className = 'list-section-heading';
+                dailyHeading.textContent = tr.dailyQuestionsLabel;
+                content.appendChild(dailyHeading);
+
+                if (dailyQs.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'list-item';
+                    empty.style.color = '#999';
+                    empty.textContent = tr.noQuestions;
+                    content.appendChild(empty);
+                } else {
+                    dailyQs.forEach(q => renderQuestionRow(content, q));
+                }
+            }
+
+            if (listFilter === 'all' || listFilter === 'weekly') {
+                const weeklyHeading = document.createElement('h3');
+                weeklyHeading.className = 'list-section-heading';
+                weeklyHeading.textContent = tr.weeklyQuestionsLabel;
+                content.appendChild(weeklyHeading);
+
+                if (weeklyQs.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'list-item';
+                    empty.style.color = '#999';
+                    empty.textContent = tr.noWeeklyQuestions;
+                    content.appendChild(empty);
+                } else {
+                    weeklyQs.forEach(q => renderQuestionRow(content, q));
+                }
+            }
+        }
+
+        function toggleList() {
+            const listModal = document.getElementById('list-modal');
+            const addModal = document.getElementById('add-modal');
+            if (listModal.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                addModal.style.display = 'none';
+                setListFilter('all');
+                openOverlay(listModal);
+            }
+        }
+
+        function processInput() {
+            const addInput = document.getElementById('add-input');
+            const text = addInput.value.trim();
+            if (!text) { toggleAddModal(); return; }
+
+            const allQs = getAllQuestions();
+            const byText = txt => allQs.find(q => q.text === txt);
+
+            if (addModalMode === 'edit') {
+                const q = allQs.find(qq => qq.id === editingQuestionId);
+                if (!q) { toggleAddModal(); return; }
+                if (text !== q.text && byText(text)) {
+                    alert(t('exists'));
+                    return;
+                }
+                q.text = text;
+                saveAllQuestions(allQs);
+                alert(t('renamed'));
+                toggleAddModal();
+                toggleList();
+            } else {
+                if (byText(text)) {
+                    alert(t('exists'));
+                    return;
+                }
+                const existingIds = new Set(allQs.map(q => q.id));
+                allQs.push({ id: makeUniqueId(text, existingIds), text, freq: addFreq });
+                saveAllQuestions(allQs);
+                alert(t('added'));
+                toggleAddModal();
+            }
+
+            refreshQueueIfIdle();
+        }
+
+        // If the main view is currently showing "All done" or "No questions",
+        // re-run startup so it picks up any question that was just added,
+        // edited, or removed (including today's already-answered filtering).
+        function refreshQueueIfIdle() {
+            if (questionText.dataset.stateKey === 'allDone' || questionText.dataset.stateKey === 'noQuestions') {
+                init();
+            }
+        }
+
+        // --- DELETE CONFIRMATION ---
+        let pendingDeleteId = null;
+
+        function confirmDeleteQuestion(id) {
+            const q = getAllQuestions().find(qq => qq.id === id);
+            if (!q) return;
+            pendingDeleteId = id;
+            document.getElementById('delete-confirm-text').textContent = `${t('deleteConfirmPrefix')} "${q.text}"? ${t('deleteConfirmNote')}`;
+            document.getElementById('list-modal').style.display = 'none';
+            openOverlay(document.getElementById('delete-confirm-modal'));
+        }
+
+        function cancelDelete() {
+            pendingDeleteId = null;
+            closeActiveOverlay();
+            toggleList();
+        }
+
+        function performDelete() {
+            if (pendingDeleteId) {
+                const allQs = getAllQuestions().filter(q => q.id !== pendingDeleteId);
+                saveAllQuestions(allQs);
+                pendingDeleteId = null;
+            }
+            closeActiveOverlay();
+            toggleList();
+            refreshQueueIfIdle();
+        }
+
+        // --- CALENDAR REMINDER (.ics export) ---
+        function toggleReminderModal() {
+            const overlay = document.getElementById('reminder-modal');
+            if (overlay.style.display === 'flex') {
+                closeActiveOverlay();
+            } else {
+                document.getElementById('export-modal').style.display = 'none';
+                openOverlay(overlay);
+            }
+        }
+
+        // Builds a daily-recurring .ics reminder using "floating" local time
+        // (no TZID, no trailing Z) — the standard way to say "this clock time,
+        // every day, in whatever timezone the importing calendar uses." This
+        // is a one-time export, not a live sync: re-export if you change the
+        // time or want to regenerate it.
+        function downloadReminderIcs() {
+            const timeInput = document.getElementById('reminder-time-input');
+            const [hh, mm] = (timeInput.value || '09:00').split(':').map(Number);
+
+            const now = new Date();
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0);
+            // If that time already passed today, start tomorrow instead of
+            // firing an immediate reminder for a moment already gone.
+            if (start < now) {
+                start.setDate(start.getDate() + 1);
+            }
+            const end = new Date(start.getTime() + 15 * 60 * 1000);
+
+            const pad = n => String(n).padStart(2, '0');
+            const floatingStamp = d =>
+                `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+
+            const utcNow = new Date();
+            const utcStamp =
+                `${utcNow.getUTCFullYear()}${pad(utcNow.getUTCMonth() + 1)}${pad(utcNow.getUTCDate())}T${pad(utcNow.getUTCHours())}${pad(utcNow.getUTCMinutes())}${pad(utcNow.getUTCSeconds())}Z`;
+
+            const uid = `daily-check-reminder-${Date.now()}@local`;
+
+            const ics = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Daily Check//Reminder//EN',
+                'CALSCALE:GREGORIAN',
+                'BEGIN:VEVENT',
+                `UID:${uid}`,
+                `DTSTAMP:${utcStamp}`,
+                `DTSTART:${floatingStamp(start)}`,
+                `DTEND:${floatingStamp(end)}`,
+                'RRULE:FREQ=DAILY',
+                'SUMMARY:Daily Check-in',
+                'DESCRIPTION:Time for your daily check-in.',
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ].join('\r\n');
+
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'daily_check_reminder.ics';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toggleReminderModal();
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
